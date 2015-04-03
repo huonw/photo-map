@@ -1,0 +1,54 @@
+* { box-sizing: border-box; }
+
+html, body, #map {
+  height: 100%;
+  margin: 0;
+  background: black;
+}
+body {
+  z-index: 0;
+}
+
+#map-sizer {
+  height: calc(100% - 60px);
+  z-index: 1;
+}
+#timeline-sizer {
+  margin: 0 0;
+  height: 60px;
+  overflow-x: scroll;
+  overflow-y: hidden;
+  z-index: 2;
+}
+#timeline-padding {
+  padding: 0 20px 0;
+}
+#timeline {
+  background: linear-gradient(90deg,
+                              hsl(0, 80%, 50%),
+                              hsl(165, 80%, 50%) 50%,
+                              hsl(330, 80%, 50%));
+  height: 20px;
+  position: relative;
+}
+.timeline-label {
+  color: white;
+}
+.timeline-clicker {
+  height: 20px;
+  cursor: pointer;
+  /*min-width: 1px;*/
+  background: rgba(0, 0, 0, 0.3);
+  border: solid rgba(0, 0, 0, 0.4);
+  border-width: 0 1px;
+  position: absolute;
+}
+.timeline-year {
+  padding-top: 22px;
+  padding-left: 5px;
+  position: absolute;
+  border-left: 1px solid #bbb;
+  color: #bbb;
+  font-family: sans-serif;
+  font-weight: bold;
+}
