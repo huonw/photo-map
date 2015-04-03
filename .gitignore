@@ -1,1 +1,5 @@
 target
+*.sqlite3
+*.gpx
+*.csv
+perf.data*
