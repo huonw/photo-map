@@ -10,13 +10,9 @@ extern crate rustc_serialize;
 use std::env;
 use std::io;
 use std::io::prelude::*;
+use std::fs::File;
 use std::path::Path;
 
-#[derive(RustcEncodable)]
-struct Data {
-    summary: Summary,
-    clusters: Vec<Cluster>
-}
 #[derive(RustcEncodable)]
 struct Summary {
     ids: Vec<i64>,
@@ -42,6 +38,8 @@ fn main() {
     opts.optflag("h", "help", "print this message");
     opts.reqopt("d", "database", "SQLite database to insert records into", "FILE");
     opts.optopt("m", "min-points", "minimum number of points to count as a real cluster", "NUM");
+    opts.reqopt("s", "summary", "file to print summary to", "FILE");
+    opts.reqopt("c", "clusters", "flie to print clusters to", "FILE");
 
     let matches = match opts.parse(args) {
         Ok(m) => m,
@@ -64,6 +62,10 @@ fn main() {
             panic!("invalid argument -m: {}", e)
         }
     };
+
+    let mut summary_file = File::create(&matches.opt_str("s").unwrap()).unwrap();
+    let mut clusters_file = File::create(&matches.opt_str("c").unwrap()).unwrap();
+
 
     let db_file = &matches.opt_str("d").unwrap();
     let db_file = Path::new(db_file);
@@ -122,10 +124,6 @@ fn main() {
         })
     }
 
-    let data = Data {
-        summary: summary,
-        clusters: cluster_data,
-    };
-
-    write!(&mut std::io::stdout(), "{}", rustc_serialize::json::as_json(&data)).unwrap();
+    write!(&mut summary_file, "{}", rustc_serialize::json::as_json(&summary)).unwrap();
+    write!(&mut clusters_file, "{}", rustc_serialize::json::as_json(&cluster_data)).unwrap();
 }

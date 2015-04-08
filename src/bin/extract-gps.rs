@@ -1,5 +1,3 @@
-#![feature(os, exit_status)]
-
 extern crate rexiv2;
 extern crate getopts;
 extern crate simple_parallel;
@@ -10,21 +8,17 @@ extern crate chrono;
 extern crate log;
 extern crate env_logger;
 extern crate rand;
+extern crate num_cpus;
 
 use rand::Rng;
 
 use std::collections::HashSet;
 use std::sync::Mutex;
-use std::{env, io};
+use std::{env, io, process};
 use std::io::prelude::*;
 use std::fs::File;
 use std::path::Path;
 
-
-#[allow(deprecated)]
-fn cpus() -> usize {
-    std::os::num_cpus()
-}
 
 fn main() {
     env_logger::init().unwrap();
@@ -44,8 +38,7 @@ fn main() {
         Ok(m) => m,
         Err(e) => {
             writeln!(&mut io::stderr(), "invalid arguments: {}", e).unwrap();
-            env::set_exit_status(1);
-            return
+            process::exit(1);
         }
     };
 
@@ -54,7 +47,7 @@ fn main() {
         return
     }
     let nthreads = match matches.opt_str("t").map(|s| s.parse()) {
-        None => cpus(),
+        None => num_cpus::get(),
         Some(Ok(t)) => t,
         Some(Err(e)) => {
             panic!("invalid argument -t: {}", e)
@@ -167,7 +160,7 @@ fn handle_file(idx: usize, total: usize,
 
     let mut already_exists = false;
     let _ = conn.query_row_safe("SELECT 1 FROM positions
-                                 WHERE latitude = ? AND longitude = ?
+                                 WHERE true_latitude = ? AND true_longitude = ?
                                    AND gps_timestamp = ? AND filename = ?",
                                 &[&gps.latitude, &gps.longitude, &gps_timestamp, &file],
                                 |_| already_exists = true);

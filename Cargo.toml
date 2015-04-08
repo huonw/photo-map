@@ -15,6 +15,17 @@ log = "0.3"
 env_logger = "0.3"
 rustc-serialize = "0.3"
 rand = "0.3"
+num_cpus = "0.1"
+hyper = "0.3"
+mustache = "*"
+
+#iron = "0.1"
+#router = "0.0"
 
 [dependencies.image]
 git = "https://github.com/PistonDevelopers/image"
+
+[dependencies.nickel]
+git = "https://github.com/nickel-org/nickel.rs"
+[dependencies.nickel_macros]
+git = "https://github.com/nickel-org/nickel.rs"

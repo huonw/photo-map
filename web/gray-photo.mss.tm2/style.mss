@@ -4,7 +4,7 @@
 // Common Colors //
 @water: hsl(240, 100%, 0%);
 
-@road:  #888;
+@road:  #aaa;
 @land:  #111111;
 
 @fill1: #000000;
@@ -54,24 +54,30 @@
   [class='full_highlight'] { polygon-fill: #fea; }
 }
 
-#contour {
-  [zoom >= 17][index= 1], [zoom >= 15][index= 2], [zoom >= 10][index= 5] {
-    line-color: @fill3;
-    opacity: 0.3;
-    line-width: 1; 
+#contour::line[index!=-1] {
+  line-color: @fill3;
+  line-opacity: 0.15;
+  line-width: 1;
+  [index>=5] {
+    line-opacity: 0.3;
+    line-width: 1.2;
   }
-  [zoom >= 10][index = 10], [zoom >= 17][index = 5] {
+}
+#contour::label {
+  [zoom >= 10][index = 10], [zoom >= 15][index = 5] {
+    text-opacity: 0.8;
     text-name: [ele];
     text-fill: @text;
     text-face-name: 'Open Sans Regular';
-    text-size: 12;
+    text-size: 10;
+    [zoom >= 17] { text-size: 14; }
     text-placement: line;
-    text-dy: 12;
     text-halo-fill: black;
-    text-halo-opacity: 0.8;
+    text-halo-opacity: 0.3;
     text-halo-radius: 2;
   }
 }
+
 
 #building {
   polygon-fill: white;

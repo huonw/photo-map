@@ -8,7 +8,6 @@ extern crate getopts;
 
 extern crate photo_map;
 
-use std::collections::HashMap;
 use std::env;
 use std::io;
 use std::io::prelude::*;
@@ -73,7 +72,7 @@ fn main() {
                                          gps_timestamp
                                   FROM positions
                                   ORDER BY gps_timestamp").unwrap();
-    let mut points = query.query(&[]).unwrap().map(|r| r.unwrap())
+    let points = query.query(&[]).unwrap().map(|r| r.unwrap())
         .map(|r| Point {
             id: r.get(0), latitude: r.get(1), longitude: r.get(2), gps_timestamp: r.get(3)
         })
@@ -103,7 +102,7 @@ fn main() {
 }
 
 fn search_points<'a, I: Iterator<Item = &'a Point>>(v: &mut Vec<(f64, i64)>,
-                                                    point: &Point, mut points: I,
+                                                    point: &Point, points: I,
                                                     max_dist: f64, time_factor: f64) -> usize {
     let mut count = 0;
     let max_dist2 = max_dist * max_dist;

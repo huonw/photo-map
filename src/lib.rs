@@ -1,5 +1,3 @@
-#![feature(std_misc)]
-
 pub fn sphere_distance(r: f64, lat1: f64, lat2: f64, lon1: f64, lon2: f64) -> f64 {
     fn hav(theta: f64) -> f64 {
         let s = (theta / 2.0).sin();
@@ -25,18 +23,25 @@ pub struct Point {
 
 const EARTH_RADIUS: f64 = 6_371.0;
 impl Point {
-    fn dist2_lower_bound(&self, other: &Point, time_factor: f64) -> f64 {
+    fn dist2_lower_bound(&self, other: &Point,
+                         time_factor: f64,
+                         _speed_factor: f64) -> f64 {
         let time = (self.gps_timestamp - other.gps_timestamp) as f64 * time_factor;
         time * time
     }
-    fn dist2(&self, other: &Point, time_factor: f64) -> f64 {
+    fn dist2(&self, other: &Point, time_factor: f64, speed_factor: f64) -> f64 {
         let sphere_dist = sphere_distance(EARTH_RADIUS,
                                           self.latitude, other.latitude,
                                           self.longitude, other.longitude);
         //println!("sphere_dist: {}", sphere_dist);
-        let time = (self.gps_timestamp - other.gps_timestamp) as f64 * time_factor;
+        let time = (self.gps_timestamp - other.gps_timestamp) as f64;
+        let time_dist = time * time_factor;
 
-        sphere_dist * sphere_dist + time * time
+        let speed = sphere_dist / time; // m/s
+        let speed = speed * 3.6; // km/h
+        let speed_dist = speed * speed_factor;
+
+        sphere_dist * sphere_dist + time_dist * time_dist + speed_dist * speed_dist
         //dlat * dlat + dlon * dlon + time * time
     }
 }
@@ -44,7 +49,7 @@ impl Point {
 use std::collections::{HashSet};
 
 pub fn dbscan(points: &[Point],
-              time_factor: f64,
+              time_factor: f64, speed_factor: f64,
               max_dist: f64, min_points: usize) -> Vec<Vec<i64>> {
     let mut clusters = vec![];
     let mut visited = HashSet::new();
@@ -59,7 +64,7 @@ pub fn dbscan(points: &[Point],
 
         //println!("new cluster: {:?}", point);
         let mut nbrs = vec![];
-        neighbours(&mut nbrs, i, point, points, max_dist2, time_factor);
+        neighbours(&mut nbrs, i, point, points, max_dist2, time_factor, speed_factor);
 
         let mut cluster = vec![point.id];
         in_cluster.insert(point.id);
@@ -71,7 +76,7 @@ pub fn dbscan(points: &[Point],
                 let p2 = &points[i2];
                 if visited.insert(p2.id) {
                     let old_len = nbrs.len();
-                    neighbours(&mut nbrs, i2, p2, points, max_dist2, time_factor);
+                    neighbours(&mut nbrs, i2, p2, points, max_dist2, time_factor, speed_factor);
                     if nbrs.len() - old_len < min_points {
                         //println!("not enough new");
                         // undo: the new point doesn't have enough close
@@ -155,16 +160,17 @@ impl<'a> Context<'a> {
 */
 fn search_points<'a, T, I: Iterator<Item = (T, &'a Point)>>(v: &mut Vec<(f64, i64, T)>,
                                                             point: &Point, points: I,
-                                                            max_dist2: f64, time_factor: f64)
+                                                            max_dist2: f64,
+                                                            time_factor: f64,
+                                                            speed_factor: f64)
                                                             -> usize
 {
     let mut count = 0;
     for (x, point2) in points {
-        let dist2_lower_bound = point.dist2_lower_bound(point2, time_factor);
-        //println!("dist: {:?} {:?} {} {}", point, point2, dist2_lower_bound, max_dist2);
+        let dist2_lower_bound = point.dist2_lower_bound(point2, time_factor, speed_factor);
         if dist2_lower_bound > max_dist2 { break }
-        let dist2 = point.dist2(point2, time_factor);
-        //println!("dist: {} {}", dist2, max_dist2);
+
+        let dist2 = point.dist2(point2, time_factor, speed_factor);
         if dist2 > max_dist2 { break }
         v.push((dist2, point2.id, x));
         count += 1;
@@ -174,13 +180,13 @@ fn search_points<'a, T, I: Iterator<Item = (T, &'a Point)>>(v: &mut Vec<(f64, i6
 
 fn neighbours(neighbours: &mut Vec<(f64, i64, usize)>,
               i: usize, point: &Point, points: &[Point],
-              max_dist2: f64, time_factor: f64) {
+              max_dist2: f64, time_factor: f64, speed_factor: f64) {
     search_points(neighbours,
                   point,
                   points[..i].iter().enumerate().rev(),
-                  max_dist2, time_factor);
+                  max_dist2, time_factor, speed_factor);
     search_points(neighbours,
                   point,
                   (i..).zip(points[i..].iter()),
-                  max_dist2, time_factor);
+                  max_dist2, time_factor, speed_factor);
 }

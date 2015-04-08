@@ -40,39 +40,47 @@ function main() {
     maxZoom: 20
   }).addTo(map);
 
-  var has_hash = !!L.Hash.prototype.parseHash(window.location.hash);
-  map.fitBounds(L.latLngBounds([[80, -180], [-80, 180]]));
+  var summary_line = L.polyline(SUMMARY.coords, { color: 'white', opacity: 1.0, weight: 1 })
+                 .addTo(map);
+
+  var parsed_hash = L.Hash.prototype.parseHash(window.location.hash);
+  var set_bounds = parsed_hash ?
+    function() { map.setView(parsed_hash.center, parsed_hash.zoom); } :
+      function() { map.fitBounds(summary_line.getBounds()); };
+  set_bounds();
   var _hash = L.hash(map);
 
   L.control.scale({ imperial: false }).addTo(map);
 
   var mini_tiles = L.tileLayer(tiles, {
     attribution: attrib,
-    maxZoom: 5,
-    minZoom: 3,
+    maxZoom: 12,
+    minZoom: 2
   });
-  L.control.minimap(mini_tiles, {
+  var minimap = L.control.minimap(mini_tiles, {
     autoToggleDisplay: true,
     position: 'topright',
-    aimingRectOptions: { color: 'white', weight: 2, opacity: 1.0 }
+    aimingRectOptions: { color: 'white', weight: 2, opacity: 1.0 },
+    zoomLevelOffset: -8
   }).addTo(map);
+  var mini_summary = L.polyline(SUMMARY.coords, { color: 'white', opacity: 0.7, weight: 1 })
+                     .addTo(minimap._miniMap);
+  set_bounds();
 
   var id_to_cluster_line = {};
   var id_to_cluster_marker = {};
   var id_to_cluster_info = {};
 
-  var oReq = new XMLHttpRequest();
 
-  oReq.onload = function() {
-    var data = JSON.parse(this.responseText);
+  var clustersReq = new XMLHttpRequest();
+  var clusters = null;
 
-    if (!has_hash) {
-      var bounds = L.latLngBounds(data.summary.coords);
-      map.fitBounds(bounds);
-    }
+  var data_loaded = function() {
+    if (!clusters) { throw 'data not yet loaded' };
+    var summary = SUMMARY;
 
-    var time_start = data.summary.times[0][0];
-    var time_end = data.summary.times[data.summary.times.length - 1][1];
+    var time_start = summary.times[0][0];
+    var time_end = summary.times[summary.times.length - 1][1];
     var time_range = time_end - time_start;
     var normalise = function(t) {
       return (t - time_start) / time_range;
@@ -80,8 +88,8 @@ function main() {
 
     var width = document.body.clientWidth;
     var height = document.body.clientHeight;
-    var timeline_width = Math.max(width, 2 * time_range / SECONDS_PER_DAY);
-    timeline_padding.style.width = timeline_width + 'px';
+    //var timeline_width = Math.max(width, 2 * time_range / SECONDS_PER_DAY);
+    //timeline_padding.style.width = timeline_width + 'px';
 
     for (var year_start = Math.ceil(time_start/SECONDS_PER_YEAR)*SECONDS_PER_YEAR;
          year_start < time_end;
@@ -111,7 +119,6 @@ function main() {
       var marker = L.circleMarker(latlng, options).addTo(map);
       var open_popup = (function(marker, text) {
         return function() {
-          console.log(marker._leaflet_id, text);
           var popupopts = { autoPanPadding: L.point(width / 5, height / 5) };
           marker.bindPopup(text, popupopts).openPopup();
         }
@@ -142,13 +149,13 @@ function main() {
       (function(marker) {
         var f = function() { marker.make_popup() };
         clicker.addEventListener('click', f);
-        line.addEventListener('click', f);
+        //line.addEventListener('click', f);
       })(marker);
     }
 
 
-    for (var i = 0; i < data.clusters.length; i++) {
-      var cluster = data.clusters[i];
+    for (var i = 0; i < clusters.length; i++) {
+      var cluster = clusters[i];
 
       var lineopts = {
         color: time_to_color(cluster.mean_time, 50, 60),
@@ -166,27 +173,18 @@ function main() {
       };
       var start_pos = normalise(cluster.times[0]) * 100;
       var end_pos = normalise(cluster.times[cluster.times.length - 1]) * 100;
-      /*
-      if (cluster.coords.length == 1) {
-        time_marker(cluster.coords[0],
-                    cluster.mean_time,
-                    new Date(cluster.times[0] * 1000).toDateString(),
-                    dotopts);
-      }
-       */
     }
 
-    //var line = L.polyline(data.summary).addTo(map);
     var prev = null;
-    for (var i = 0; i < data.summary.coords.length; i++) {
-      var id = data.summary.ids[i];
+    for (var i = 0; i < summary.coords.length; i++) {
+      var id = summary.ids[i];
       var line = id_to_cluster_line[id];
       var line_bounds = line.getBounds();
       var radius = line_bounds.getNorthEast().distanceTo(line_bounds.getSouthWest()) / 2 * 1.05;
 
       var current = {
-        id: id, coords: line_bounds.getCenter(),//L.latLng(data.summary.coords[i]),
-        times: data.summary.times[i],
+        id: id, coords: line_bounds.getCenter(),//L.latLng(summary.coords[i]),
+        times: summary.times[i],
         radius: radius
       };
 
@@ -260,10 +258,19 @@ function main() {
       }
       prev = current;
     }
-  };
-  oReq.open("get", "data.json", true);
-  window.setTimeout(function() {oReq.send();}, 10);
 
+    if (!!summary_line) {
+      map.removeLayer(summary_line);
+    }
+  };
+
+  clustersReq.onload = function() {
+    clusters = JSON.parse(this.responseText);
+    data_loaded();
+  }
+
+  clustersReq.open('get', 'data/clusters.json', true);
+  clustersReq.send();
 }
 main();
 //document.body.addEventListener('load', main);

@@ -22,6 +22,7 @@ use photo_map::Point;
 
 const SECONDS_PER_DAY: f64 = 24.0 * 60.0 * 60.0;
 const DEFAULT_TIME_FACTOR: f64 = 20.0 / SECONDS_PER_DAY;
+const DEFAULT_SPEED_FACTOR: f64 = 0.0;
 const DEFAULT_DIST: f64 = 20.0;
 const DEFAULT_MIN_POINTS: usize = 5;
 
@@ -34,6 +35,7 @@ fn main() {
     opts.optflag("h", "help", "print this message");
     opts.reqopt("d", "database", "SQLite database to insert records into", "FILE");
     opts.optopt("t", "time-factor", "how many kilometres one day counts for", "NUM");
+    opts.optopt("s", "speed-factor", "number of hours to spread speed over", "NUM");
     opts.optopt("x", "dist", "epsilon to use for dbscan", "NUM");
     opts.optopt("m", "min-points", "minimum number of points in a cluster", "NUM");
     opts.optflag("n", "dry-run", "don't edit the database");
@@ -52,11 +54,18 @@ fn main() {
         return
     }
 
-    let time_factor = match matches.opt_str("t").map(|s| s.parse()) {
+    let time_factor = match matches.opt_str("t").map(|s| s.parse::<f64>()) {
         None => DEFAULT_TIME_FACTOR,
         Some(Ok(t)) => t / SECONDS_PER_DAY,
         Some(Err(e)) => {
             panic!("invalid argument -t: {}", e)
+        }
+    };
+    let speed_factor = match matches.opt_str("s").map(|s| s.parse::<f64>()) {
+        None => DEFAULT_SPEED_FACTOR,
+        Some(Ok(t)) => t,
+        Some(Err(e)) => {
+            panic!("invalid argument -s: {}", e)
         }
     };
     let dist = match matches.opt_str("x").map(|s| s.parse()) {
@@ -121,7 +130,7 @@ fn main() {
     let mut update_cluster =
         conn.prepare("UPDATE positions SET cluster_id = ? WHERE ROWID = ?").unwrap();
 
-    let clusters = photo_map::dbscan(&points, time_factor, dist, min_points);
+    let clusters = photo_map::dbscan(&points, time_factor, speed_factor, dist, min_points);
     println!("total: points {}, clusters {}", points.len(), clusters.len());
     for (i, c) in clusters.iter().enumerate() {
         let mut lat = 0.0;
