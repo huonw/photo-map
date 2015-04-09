@@ -3,3 +3,5 @@ target
 *.gpx
 *.csv
 perf.data*
+/web/clusters.json
+/web/summary.json
