@@ -1,3 +1,14 @@
+// allow multiple popups to appear at once.
+L.Map = L.Map.extend({
+    openPopup: function(popup) {
+        // this.closePopup();
+        this._popup = popup;
+        return this.addLayer(popup).fire('popupopen', {
+            popup: this._popup
+        });
+    }
+});
+
 window.addEventListener('load', function() {
     var help = document.getElementById('help-content');
     var help_close = document.getElementById('help-close');
@@ -137,16 +148,25 @@ window.addEventListener('load', function() {
         }
 
         var time_marker = function(bounds, time, text, options) {
-            options.color = time_to_color(time, 50, 60);
+            var color = time_to_color(time, 50, 60);
+            options.color = color;
             var marker = L.circleMarker(bounds.getCenter(), options).addTo(map);
-            var open_popup = (function(marker, text) {
-                                  return function() {
-                                      var zoom = Math.min(map.getBoundsZoom(bounds) - 1, map.getZoom());
-                                      map.fitBounds(bounds, { maxZoom: zoom, animate: true });
-                                      marker.bindPopup(text, { autoPan: false }).openPopup();
-                                  }
-                              })(marker, text);
-            marker.addEventListener('click', open_popup);
+            var open_popup = function(manual_pan) {
+                var pop_opts = {
+                    autoPan: true,
+                    closeButton: false
+                };
+                if (manual_pan) {
+                    var zoom = Math.min(map.getBoundsZoom(bounds) - 1, map.getZoom());
+                    map.fitBounds(bounds, { maxZoom: zoom, animate: true });
+                    pop_opts.autoPan = false;
+                }
+                marker.bindPopup(text, pop_opts).openPopup();
+                var popup = marker._popup;
+                popup._wrapper.style.background = color;
+                popup._tip.style.background = color;
+            };
+            marker.addEventListener('click', function() { open_popup(true) });
             marker.make_popup = open_popup;
             return marker;
         };
@@ -170,9 +190,12 @@ window.addEventListener('load', function() {
             timeline.appendChild(clicker);
 
             (function(marker) {
-                var f = function() { marker.make_popup() };
+                var f = function() { marker.make_popup(true) };
                 clicker.addEventListener('click', f);
-                //line.addEventListener('click', f);
+                var line = id_to_cluster_line[id];
+                if (line) {
+                    line.addEventListener('click', f);
+                }
             })(marker);
         }
 
@@ -234,7 +257,8 @@ window.addEventListener('load', function() {
             var circle_opts = {
                 color: time_to_color(id_to_cluster_info[current.id].mean_time, 100, 60),
                 weight: 2,
-                fill: false
+                fill: false,
+                clickable: false
             };
             L.circle(current.coords, radius, circle_opts).addTo(map);
             if (id_to_cluster_info[id].times.length > 1) {
