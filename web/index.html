@@ -1,18 +1,47 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta http-equiv="Content-Type" content="text/html; chatset=UTF-8"/>
     <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" />
     <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   </head>
   <body>
+    <div id="help-popup">
+      <div id="help-close">❌</div>
+      <div id="help-open"><i id="help" class="fa fa-info-circle"></i></div>
+      <div id="help-content">
+        <h1>Places</h1>
+
+        <p>This map displays <a href="http://huonw.github.com">my</a>
+          path across the world as recorded my photos I have taken
+          with recorded GPS and time information. Collections of
+          points close in time and space are grouped and
+          circled. These are marked on the timeline below by
+          (clickable) dark segments.</p>
+
+        <p>The passage of time is indicated by:</p>
+        <ul>
+          <li><div id="help-rainbow"></div> the rainbow gradient
+            changes evenly with time across the whole period.</li>
+          <li><div id="help-brightness"></div> the brightness of that
+            colour oscillates with a period of one week.</li>
+        </ul>
+
+        <div id="source-link"><a href="https://github.com/huonw/photo-map"><i class="fa fa-github"></i> source</a></div>
+      </div>
+    </div>
+
     <div id="map-sizer">
       <div id="map"></div>
     </div>
     <div id="timeline-sizer">
       <div id="timeline-padding">
         <div id="timeline"></div>
+        <div id="description">
+          <h1 id="page-header">Places</h1>
+        </div>
       </div>
     </div>
     <script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>

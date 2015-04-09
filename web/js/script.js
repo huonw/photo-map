@@ -1,4 +1,26 @@
-function main() {
+window.addEventListener('load', function() {
+  var help = document.getElementById('help-content');
+  var help_close = document.getElementById('help-close');
+  var help_open = document.getElementById('help-open');
+
+  function set_help(open) {
+      window.localStorage.setItem('help-state', open);
+      if (open) {
+          help.style.display = '';
+          help_close.style.display = '';
+          help_open.style.display = '';
+      } else {
+          help.style.display = 'none';
+          help_close.style.display = 'none';
+          help_open.style.display = 'block';
+      }
+  }
+
+  help_close.addEventListener('click', function() { set_help(false); });
+  help_open.addEventListener('click', function() { set_help(true); });
+  set_help(window.localStorage.getItem('help-state') !== 'false');
+
+
   function weighted(x, y, weight) {
 
     var w =  x + (y - x) * weight;
@@ -245,7 +267,7 @@ function main() {
         var prev_ = start;
 
         var weight = Math.ceil(7/2 * dt);
-        weight = 1;
+        //weight = 1;
         for (var j = 1; j <= weight; j++) {
           var current_ = weighted_point(start, end, j / weight);
           var time = weighted(seg_start, seg_end, (j - 0.5) / weight);
@@ -271,6 +293,4 @@ function main() {
 
   clustersReq.open('get', 'data/clusters.json', true);
   clustersReq.send();
-}
-main();
-//document.body.addEventListener('load', main);
+});

@@ -4,6 +4,7 @@ html, body, #map {
   height: 100%;
   margin: 0;
   background: black;
+  font-family: sans-serif;
 }
 body {
   z-index: 0;
@@ -12,30 +13,42 @@ body {
 #map-sizer {
   height: calc(100% - 60px);
   z-index: 1;
+  position: relative;
 }
 #timeline-sizer {
   margin: 0 0;
   height: 60px;
-  overflow-x: scroll;
-  overflow-y: hidden;
   z-index: 2;
 }
 #timeline-padding {
   padding: 0 20px 0;
-}
-#timeline {
+  height: 15px;
   background: linear-gradient(90deg,
                               hsl(0, 80%, 50%),
-                              hsl(165, 80%, 50%) 50%,
+                              hsl(0, 80%, 50%) 49%,
+                              hsl(330, 80%, 50%) 51%,
                               hsl(330, 80%, 50%));
-  height: 20px;
+}
+
+#timeline, #help-rainbow {
+  background: linear-gradient(90deg,
+                              hsl(0, 80%, 50%),
+                              hsl(66, 80%, 50%) 20%,
+                              hsl(132, 80%, 50%) 40%,
+                              hsl(198, 80%, 50%) 60%,
+                              hsl(264, 80%, 50%) 80%,
+                              hsl(330, 80%, 50%));
+}
+#timeline {
+  height: 15px;
   position: relative;
+
 }
 .timeline-label {
   color: white;
 }
 .timeline-clicker {
-  height: 20px;
+  height: 15px;
   cursor: pointer;
   /*min-width: 1px;*/
   background: rgba(0, 0, 0, 0.3);
@@ -44,11 +57,113 @@ body {
   position: absolute;
 }
 .timeline-year {
-  padding-top: 22px;
+  padding-top: 16px;
   padding-left: 5px;
   position: absolute;
-  border-left: 1px solid #bbb;
+  border-left: 2px solid #bbb;
   color: #bbb;
-  font-family: sans-serif;
   font-weight: bold;
+  font-size: 16px;
+  line-height: 1em;
+}
+
+
+#description {
+  color: white;
+  margin-top: 17px;
+  text-align: center;
+  font-size: 25px;
+  line-height: 25px;
+}
+#page-header {
+  margin: 0;
+  padding: 0;
+  text-transform: uppercase;
+  font-size: 1em;
+  display: inline-block;
+}
+#help {
+  font-size: 0.8em;
+  cursor: pointer;
+}
+#help-popup {
+  color: white;
+  position: absolute;
+  bottom: 100px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid #222;
+  -moz-hyphens: auto;
+  -webkit-hyphens: auto;
+  -ms-hyphens: auto;
+  hyphens: auto;
+  max-width: calc(100% - 20px);
+  max-height: calc(100% - 105px);
+  overflow: auto;
+  z-index: 4;
+}
+#help-content {
+  max-width: 300px;
+  padding: 5px 10px;
+}
+#help-close, #help-open {
+  cursor: pointer;
+  float: right;
+  font-size: 2em;
+  width: 1em;
+  text-align: center;
+}
+#help-open {
+  display: none;
+}
+
+
+h1 {
+  margin: 0;
+  text-align: center;
+}
+p, ul {
+  margin: 5px 0;
+}
+a {
+  color: white;
+}
+ul {
+  padding: 0 10px;
+  list-style: none;
+}
+
+#help-rainbow, #help-brightness {
+  display: inline-block;
+  width: 100%;
+  height: 10px;
+}
+
+#help-brightness {
+  background: linear-gradient(90deg,
+                              hsl(0, 80%, 60%) 0%,
+                              hsl(0, 80%, 66%) 5%,
+                              hsl(0, 80%, 71%) 10%,
+                              hsl(0, 80%, 76%) 15%,
+                              hsl(0, 80%, 79%) 20%,
+                              hsl(0, 80%, 80%) 25%,
+                              hsl(0, 80%, 79%) 30%,
+                              hsl(0, 80%, 76%) 35%,
+                              hsl(0, 80%, 71%) 40%,
+                              hsl(0, 80%, 66%) 45%,
+                              hsl(0, 80%, 60%) 50%,
+                              hsl(0, 80%, 53%) 55%,
+                              hsl(0, 80%, 48%) 60%,
+                              hsl(0, 80%, 43%) 65%,
+                              hsl(0, 80%, 40%) 70%,
+                              hsl(0, 80%, 40%) 75%,
+                              hsl(0, 80%, 40%) 80%,
+                              hsl(0, 80%, 43%) 85%,
+                              hsl(0, 80%, 48%) 90%,
+                              hsl(0, 80%, 53%) 95%,
+                              hsl(0, 80%, 59%) 100%);
+}
+
+#source-link {
+  text-align: center;
 }
