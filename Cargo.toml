@@ -8,7 +8,7 @@ authors = ["Huon Wilson <dbau.pp@gmail.com>"]
 rexiv2 = "0.2"
 getopts = "0.2"
 simple_parallel = "0.1"
-rusqlite = "0.0.14"
+rusqlite = "0.0.17"
 chrono = "0.2"
 num = "0.1"
 log = "0.3"
@@ -17,13 +17,11 @@ rustc-serialize = "0.3"
 rand = "0.3"
 num_cpus = "0.1"
 hyper = "0.3"
-mustache = "*"
+image = "0.3"
 
-#iron = "0.1"
-#router = "0.0"
-
-[dependencies.image]
-git = "https://github.com/PistonDevelopers/image"
+iron = "0.1"
+router = "0.0"
+flate2 = "0.2"
 
 [dependencies.nickel]
 git = "https://github.com/nickel-org/nickel.rs"
