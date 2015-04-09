@@ -136,13 +136,14 @@ window.addEventListener('load', function() {
       return 'hsl(' + hue + ',' + sat + '%,' + lightness + '%)'
     }
 
-    var time_marker = function(latlng, time, text, options) {
+    var time_marker = function(bounds, time, text, options) {
       options.color = time_to_color(time, 50, 60);
-      var marker = L.circleMarker(latlng, options).addTo(map);
+      var marker = L.circleMarker(bounds.getCenter(), options).addTo(map);
       var open_popup = (function(marker, text) {
         return function() {
-          var popupopts = { autoPanPadding: L.point(width / 5, height / 5) };
-          marker.bindPopup(text, popupopts).openPopup();
+          var zoom = Math.min(map.getBoundsZoom(bounds) - 1, map.getZoom());
+          map.fitBounds(bounds, { maxZoom: zoom, animate: true });
+          marker.bindPopup(text, { autoPan: false }).openPopup();
         }
       })(marker, text);
       marker.addEventListener('click', open_popup);
@@ -150,7 +151,7 @@ window.addEventListener('load', function() {
       return marker;
     };
 
-    var cluster_marker = function(id, latlng, times, options) {
+    var cluster_marker = function(id, bounds, times, options) {
       var start = times[0];
       var end = times[times.length - 1];
       var start_date = new Date(start * 1000).toDateString();
@@ -158,7 +159,7 @@ window.addEventListener('load', function() {
       var text = start_date == end_date ? start_date : start_date + ' - ' + end_date;
 
       options.radius = 0;
-      var marker = time_marker(latlng, (start + end) / 2, text, options);
+      var marker = time_marker(bounds, (start + end) / 2, text, options);
       id_to_cluster_marker[id] = marker;
 
       var clicker = document.createElement('div');
@@ -217,7 +218,7 @@ window.addEventListener('load', function() {
       };
       L.circle(current.coords, radius, circle_opts).addTo(map);
       if (id_to_cluster_info[id].times.length > 1) {
-        cluster_marker(id, current.coords, current.times, {});
+        cluster_marker(id, line_bounds, current.times, {});
       }
 
       if (prev !== null) {
