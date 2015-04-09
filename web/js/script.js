@@ -176,6 +176,7 @@ window.addEventListener('load', function() {
             })(marker);
         }
 
+        var detail_lines = L.layerGroup([]);
 
         for (var i = 0; i < clusters.length; i++) {
             var cluster = clusters[i];
@@ -186,7 +187,8 @@ window.addEventListener('load', function() {
                 weight: 2,
                 clickable: true
             };
-            var line = L.polyline(cluster.coords, lineopts).addTo(map);
+            var line = L.polyline(cluster.coords, lineopts);
+            detail_lines.addLayer(line);
             id_to_cluster_line[cluster.id] = line;
             id_to_cluster_info[cluster.id] = cluster;
 
@@ -197,6 +199,24 @@ window.addEventListener('load', function() {
             var start_pos = normalise(cluster.times[0]) * 100;
             var end_pos = normalise(cluster.times[cluster.times.length - 1]) * 100;
         }
+
+        var detail_visible = false;
+        var zoom_show_detail = function() {
+            if (map.getZoom() >= 6) {
+                if (!detail_visible) {
+                    map.addLayer(detail_lines);
+                }
+                detail_visible = true;
+            } else {
+                if (detail_visible) {
+                    map.removeLayer(detail_lines);
+                }
+                detail_visible = false;
+            }
+        };
+
+        zoom_show_detail();
+        map.addEventListener('zoomend', zoom_show_detail);
 
         var prev = null;
         for (var i = 0; i < summary.coords.length; i++) {
@@ -268,7 +288,7 @@ window.addEventListener('load', function() {
                 var prev_ = start;
 
                 var weight = Math.ceil(7/2 * dt);
-                //weight = 1;
+                weight = 1;
                 for (var j = 1; j <= weight; j++) {
                     var current_ = weighted_point(start, end, j / weight);
                     var time = weighted(seg_start, seg_end, (j - 0.5) / weight);
