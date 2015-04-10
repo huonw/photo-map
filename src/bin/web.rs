@@ -4,7 +4,6 @@ extern crate nickel;
 extern crate env_logger;
 
 use hyper::net;
-use hyper::method::Method;
 use nickel::{Nickel, Request, Response, Router, Middleware, MiddlewareResult, HttpRouter};
 use nickel::mimes::MediaType;
 
