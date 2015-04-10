@@ -93,7 +93,6 @@ fn main() {
                                      r.get::<i64>(5),
                                      r.get::<i64>(6)))
                            .collect::<Vec<_>>();
-    clusters.sort_by(|a, b| a.0.cmp(&b.0));
 
     let mut query = conn.prepare("SELECT latitude, longitude, gps_timestamp
                                   FROM positions

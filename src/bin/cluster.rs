@@ -100,7 +100,7 @@ fn main() {
                                          gps_timestamp, camera_timestamp,
                                          near_home
                                   FROM positions
-                                  GROUP BY latitude, longitude, gps_timestamp
+                                  GROUP BY true_latitude, true_longitude, gps_timestamp
                                   ORDER BY gps_timestamp
                                 ").unwrap();
     let points = query.query(&[]).unwrap().map(|r| r.unwrap())
@@ -130,7 +130,7 @@ fn main() {
     let mut update_cluster =
         conn.prepare("UPDATE positions SET cluster_id = ? WHERE ROWID = ?").unwrap();
 
-    let clusters = photo_map::dbscan(&points, time_factor, speed_factor, dist, min_points);
+    let clusters = photo_map::cluster_points(&points, time_factor, speed_factor, dist, min_points);
     println!("total: points {}, clusters {}", points.len(), clusters.len());
     for (i, c) in clusters.iter().enumerate() {
         let mut lat = 0.0;

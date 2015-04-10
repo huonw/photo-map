@@ -3,6 +3,7 @@ name = "photo_map"
 version = "0.0.1"
 dependencies = [
  "chrono 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cogset 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "getopts 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -39,6 +40,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "time 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "cogset"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "conduit-mime-types"

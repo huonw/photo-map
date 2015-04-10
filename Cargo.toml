@@ -23,6 +23,8 @@ iron = "0.1"
 router = "0.0"
 flate2 = "0.2"
 
+cogset = "0.1"
+
 [dependencies.nickel]
 git = "https://github.com/nickel-org/nickel.rs"
 [dependencies.nickel_macros]
