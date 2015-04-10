@@ -1,4 +1,7 @@
 // allow multiple popups to appear at once.
+function sign(x) {
+    return x < 0 ? -1 : (x > 0 ? 1 : 0);
+}
 L.Map = L.Map.extend({
     openPopup: function(popup) {
         // this.closePopup();
@@ -48,10 +51,10 @@ window.addEventListener('load', function() {
         var x, y;
         if (x0 == 0) {
             x = 0;
-            y = Math.sign(y0) * r;
+            y = sign(y0) * r;
         } else {
             var a = y0/x0;
-            x = Math.sign(x0) * r / Math.sqrt(1 + a*a);
+            x = sign(x0) * r / Math.sqrt(1 + a*a);
             y = a * x;
         }
         return L.point(cx + x, cy + y);
@@ -256,12 +259,13 @@ window.addEventListener('load', function() {
 
             var circle_opts = {
                 color: time_to_color(id_to_cluster_info[current.id].mean_time, 100, 60),
-                weight: 2,
+                opacity: 0.8,
+                weight: 5,
                 fill: false,
                 clickable: false
             };
-            L.circle(current.coords, radius, circle_opts).addTo(map);
             if (id_to_cluster_info[id].times.length > 1) {
+                L.circle(current.coords, radius, circle_opts).addTo(map);
                 cluster_marker(id, line_bounds, current.times, {});
             }
 
