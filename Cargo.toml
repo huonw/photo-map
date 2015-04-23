@@ -22,10 +22,7 @@ image = "0.3"
 iron = "0.1"
 router = "0.0"
 flate2 = "0.2"
+nickel = "0.2"
+nickel_macros = "0.1"
 
 cogset = "0.1"
-
-[dependencies.nickel]
-git = "https://github.com/nickel-org/nickel.rs"
-[dependencies.nickel_macros]
-git = "https://github.com/nickel-org/nickel.rs"
