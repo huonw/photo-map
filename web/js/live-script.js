@@ -39,7 +39,10 @@ window.addEventListener('load', function() {
         map.removeLayer(layers);
         layers.clearLayers();
 
-        points = points.concat(new_points);
+        if (new_points.length > 0) {
+            points = points.concat(new_points);
+        }
+        if (points.length == 0) { return }
         var most_recent = points[points.length - 1];
         var mr_loc = L.latLng(most_recent.lat,most_recent.lon);
         location_marker.setLatLng(mr_loc);
