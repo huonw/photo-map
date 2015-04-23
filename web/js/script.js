@@ -1,3 +1,5 @@
+/*global L console */
+
 var SECONDS_PER_DAY = 24 * 3600;
 var SECONDS_PER_YEAR = SECONDS_PER_DAY * 365.25;
 
@@ -62,21 +64,93 @@ function circle_line_intersection(c, r, p) {
     return L.point(cx + x, cy + y);
 }
 
+function latlngbounds_to_bounds(map, llbounds, zoom) {
+    var tl = map.project(llbounds.getNorthWest(), zoom);
+    var br = map.project(llbounds.getSouthEast(), zoom);
+
+    return L.bounds(tl, br);
+}
+function bounds_to_latlngbounds(map, bounds, zoom) {
+    var nw = map.unproject(bounds.min, zoom);
+    var se = map.unproject(bounds.max, zoom);
+
+    return L.latLngBounds(nw, se);
+}
+function translate_to_include_bounds(map, lllarge, llsmall, zoom) {
+    var large = latlngbounds_to_bounds(map, lllarge, zoom);
+    var small = latlngbounds_to_bounds(map, llsmall, zoom);
+
+    var x_translate = 0;
+    if (small.min.x < large.min.x) {
+        x_translate = small.min.x - large.min.x;
+    }
+    if (small.max.x > large.max.x) {
+        if (x_translate != 0) throw 'small bounds are larger than large bounds';
+        x_translate = small.max.x - large.max.x;
+    }
+    var y_translate = 0;
+    if (small.min.y < large.min.y) {
+        y_translate = small.min.y - large.min.y;
+    }
+    if (small.max.y > large.max.y) {
+        if (y_translate != 0) throw 'small bounds are larger than large bounds';
+        y_translate = small.max.y - large.max.y;
+    }
+
+    large.max.x += x_translate;
+    large.min.x += x_translate;
+    large.max.y += y_translate;
+    large.min.y += y_translate;
+    return bounds_to_latlngbounds(map, large, zoom);
+}
+
+function bounds_at_zoomlevel(bounds, current_zoom, new_zoom) {
+    var mean = bounds.max.add(bounds.min).divideBy(2);
+    var step = bounds.max.subtract(bounds.min).divideBy(2);
+
+    var multiplier = Math.pow(2, current_zoom - new_zoom);
+
+    return L.bounds(mean.subtract(step.multiplyBy(multiplier)),
+                    mean.add(step.multiplyBy(multiplier)));
+}
+function zoomlevel_for_bounds(map, bounds, current_zoom, llinner) {
+    var inner = latlngbounds_to_bounds(map, llinner, current_zoom);
+
+    var inner_corner = inner.max.subtract(inner.min);
+    var corner = bounds.max.subtract(bounds.min);
+
+    var x = Math.log(inner_corner.x / corner.x) / Math.log(2);
+    var y = Math.log(inner_corner.y / corner.y) / Math.log(2);
+    return current_zoom - Math.ceil(Math.max(x, y));
+}
+function innerpad_bounds(bounds, t, r, b, l) {
+    b = b || t;
+    l = l || r;
+
+    var dx = bounds.max.x - bounds.min.x;
+    var dy = bounds.max.y - bounds.min.y;
+
+    var left = bounds.min.x + Math.min(dx * l[0], l[1]);
+    var right = bounds.max.x - Math.min(dx * r[0], r[1]);
+    var top = bounds.min.y + Math.min(dy * t[0], t[1]);
+    var bottom = bounds.max.y - Math.min(dy * b[0], b[1]);
+    return L.bounds([[left, top], [right, bottom]]);
+}
+
 function data_loaded(map, clusters, summary_line) {
-    var id_to_cluster_line = {};
-    var id_to_cluster_marker = {};
     var id_to_cluster_info = {};
 
     var timeline = document.getElementById('timeline');
     var timeline_padding = document.getElementById('timeline-padding');
 
-
-    if (!clusters) { throw 'data not yet loaded' };
     var summary = SUMMARY;
 
     var time_start = summary.times[0][0];
     var time_end = summary.times[summary.times.length - 1][1];
     var time_range = time_end - time_start;
+
+    var detail_lines = L.layerGroup([]);
+
     var normalise = function(t) {
         return (t - time_start) / time_range;
     };
@@ -90,62 +164,110 @@ function data_loaded(map, clusters, summary_line) {
         //hue = ((time / SECONDS_PER_YEAR) % 1) * 360;
         //lightness = offset;
         return 'hsl(' + hue + ',' + sat + '%,' + lightness + '%)'
-    }
+    };
 
-    var time_marker = function(bounds, time, text, options) {
-        var color = time_to_color(time, 50, 60);
-        options.color = color;
+    var time_popup = function(bounds, colour, text) {
         var location = L.latLng(bounds.getNorth(), bounds.getCenter().lng);
-        var marker = L.circleMarker(location, options).addTo(map);
         var open_popup = function(manual_pan) {
             var pop_opts = {
-                autoPan: true,
+                autoPan: !manual_pan,
                 closeButton: false
             };
             if (manual_pan) {
-                var zoom = Math.min(map.getBoundsZoom(bounds), map.getZoom());
-                map.fitBounds(bounds, { maxZoom: zoom, animate: true });
-                pop_opts.autoPan = false;
+                var close_to_screen =
+                    innerpad_bounds(map.getPixelBounds(), [-1, 0], [-1, 0])
+                    .intersects(latlngbounds_to_bounds(map, bounds));
+                var view_bounds, zoom;
+                if (close_to_screen) {
+                    var current_pixel_bounds = map.getPixelBounds();
+                    current_pixel_bounds = innerpad_bounds(current_pixel_bounds,
+                                                           [0.1, 200],
+                                                           [0.2, 200],
+                                                           [0.1, 200]);
+                    var current_zoom = map.getZoom();
+                    var est_zoom = zoomlevel_for_bounds(map, current_pixel_bounds, current_zoom,
+                                                        bounds);
+                    zoom = Math.min(est_zoom, current_zoom);
+
+                    var pixel_bounds = bounds_at_zoomlevel(current_pixel_bounds,
+                                                           current_zoom, zoom);
+                    var map_bounds = bounds_to_latlngbounds(map, pixel_bounds, current_zoom);
+                    view_bounds = translate_to_include_bounds(map, map_bounds,
+                                                              bounds, zoom);
+                } else {
+                    zoom = Math.min(map.getBoundsZoom(bounds.pad(0.1)), map.getZoom());
+                    view_bounds = bounds;
+                }
+                map.fitBounds(view_bounds, { maxZoom: zoom, animate: true });
             }
-            marker.bindPopup(text, pop_opts).openPopup();
-            var popup = marker._popup;
-            popup._wrapper.style.background = color;
-            popup._tip.style.background = color;
+            var popup = L.popup(pop_opts)
+                        .setLatLng(location)
+                        .setContent(text)
+                        .openOn(map);
+            popup._wrapper.style.background = colour;
+            popup._tip.style.background = colour;
         };
-        marker.addEventListener('click', function() { open_popup(true) });
-        marker.make_popup = open_popup;
-        return marker;
+        return open_popup;
     };
 
-    var cluster_indicator = function(id, line, circle, times, options) {
-                     var start = times[0];
-                     var end = times[times.length - 1];
-                     var start_date = new Date(start * 1000).toDateString();
-                     var end_date = new Date(end * 1000).toDateString();
-                     var text = start_date == end_date ? start_date : start_date + ' - ' + end_date;
+    var render_cluster = function(cluster, times) {
+        var colour = time_to_color(cluster.mean_time, 100, 60);
+        var start = times[0];
+        var end = times[times.length - 1];
 
-                     options.radius = 0;
-                     var bounds = circle.getBounds();
-                     var marker = time_marker(bounds, (start + end) / 2, text, options);
-                     id_to_cluster_marker[id] = marker;
+        // draw the line connecting the photos
+        var lineopts = {
+            color: colour,
+            opacity: 1.0,
+            weight: 2,
+            clickable: true
+        };
+        var line = L.polyline(cluster.coords, lineopts);
+        detail_lines.addLayer(line);
 
-                     var clicker = document.createElement('div');
-                     clicker.id = 'timeline-clicker-' + id;
-                     clicker.classList.add('timeline-clicker');
-                     clicker.style.width = (normalise(end) - normalise(start)) * 100 + '%';
-                     clicker.style.marginLeft = normalise(start) * 100 + '%';
-                     timeline.appendChild(clicker);
+        // draw the circle around that line
+        var line_bounds = line.getBounds();
+        var radius = line_bounds.getNorthEast().distanceTo(line_bounds.getSouthWest()) / 2 * 1.05;
+        var coords = line_bounds.getCenter();
 
-                     var f = function() {
-                                 marker.make_popup(true)
-                                 line._container.parentNode.classList.add('fade-all');
-                                 circle._path.classList.add('dont-fade');
-                                 line._path.classList.add('dont-fade');
-                             };
-                     clicker.addEventListener('click', f);
-                     line.addEventListener('click', f);
-                     circle.addEventListener('click', f);
-                 }
+        var circle_opts = {
+            color: colour,
+            opacity: 1.0,
+            weight: 5,
+            fill: false
+        };
+        var circle = L.circle(coords, radius, circle_opts).addTo(map);
+
+        // make the small rectangle on the timeline
+        var clicker = document.createElement('div');
+        clicker.id = 'timeline-clicker-' + cluster.id;
+        clicker.classList.add('timeline-clicker');
+        var start_pct = normalise(start) * 100;
+        var end_pct = normalise(end) * 100;
+        clicker.style.width = (end_pct - start_pct) + '%';
+        clicker.style.marginLeft = start_pct + '%';
+        timeline.appendChild(clicker);
+
+        // make the marker that labels the circle
+        var start_date = new Date(start * 1000).toDateString();
+        var end_date = new Date(end * 1000).toDateString();
+        var marker_text = start_date == end_date ? start_date : start_date + ' - ' + end_date;
+        var bounds = circle.getBounds();
+        var make_popup = time_popup(bounds, colour, marker_text);
+
+        // set the click handlers
+        var f = function() {
+            make_popup(true)
+            line._container.parentNode.classList.add('fade-all');
+            circle._path.classList.add('dont-fade');
+            line._path.classList.add('dont-fade');
+        };
+        clicker.addEventListener('click', f);
+        line.addEventListener('click', f);
+        circle.addEventListener('click', f);
+
+        return { coords: coords, radius: radius };
+    }
 
     var width = document.body.clientWidth;
     var height = document.body.clientHeight;
@@ -163,67 +285,28 @@ function data_loaded(map, clusters, summary_line) {
         timeline.appendChild(year);
     }
 
-    var detail_lines = L.layerGroup([]);
-
     for (var i = 0; i < clusters.length; i++) {
         var cluster = clusters[i];
-
-        var lineopts = {
-            color: time_to_color(cluster.mean_time, 50, 60),
-            opacity: 1.0,
-            weight: 2,
-            clickable: true
-        };
-        var line = L.polyline(cluster.coords, lineopts);
-        detail_lines.addLayer(line);
-        id_to_cluster_line[cluster.id] = line;
         id_to_cluster_info[cluster.id] = cluster;
-
-        var start_pos = normalise(cluster.times[0]) * 100;
-        var end_pos = normalise(cluster.times[cluster.times.length - 1]) * 100;
     }
 
-    var detail_visible = false;
-    var zoom_show_detail = function() {
-                      if (map.getZoom() >= 6) {
-                          if (!detail_visible) {
-                              map.addLayer(detail_lines);
-                          }
-                          detail_visible = true;
-                      } else {
-                          if (detail_visible) {
-                              map.removeLayer(detail_lines);
-                          }
-                          detail_visible = false;
-                      }
-                  };
-
-        zoom_show_detail();
-    map.addEventListener('zoomend', zoom_show_detail);
-
     var prev = null;
+
     for (var i = 0; i < summary.coords.length; i++) {
         var id = summary.ids[i];
-        var line = id_to_cluster_line[id];
-        var line_bounds = line.getBounds();
-        var radius = line_bounds.getNorthEast().distanceTo(line_bounds.getSouthWest()) / 2 * 1.05;
+        var cluster = id_to_cluster_info[id];
 
         var current = {
             id: id,
-            coords: line_bounds.getCenter(),//L.latLng(summary.coords[i]),
+            coords: L.latLng(summary.coords[i]),
             times: summary.times[i],
-            radius: radius
+            radius: 0
         };
 
-        var circle_opts = {
-            color: time_to_color(id_to_cluster_info[current.id].mean_time, 100, 60),
-            opacity: 1.0,
-            weight: 5,
-            fill: false,
-        };
-        if (id_to_cluster_info[id].times.length > 1) {
-            var circle = L.circle(current.coords, radius, circle_opts).addTo(map);
-                cluster_indicator(id, line, circle, current.times, {});
+        if (cluster && cluster.times.length > 1) {
+            var ret = render_cluster(cluster, current.times);
+            current.coords = ret.coords;
+            current.radius = ret.radius;
         }
 
         if (prev !== null) {
@@ -280,6 +363,24 @@ function data_loaded(map, clusters, summary_line) {
         }
         prev = current;
     }
+
+    var detail_visible = false;
+    var zoom_show_detail = function() {
+        if (map.getZoom() >= 6) {
+            if (!detail_visible) {
+                map.addLayer(detail_lines);
+            }
+            detail_visible = true;
+        } else {
+            if (detail_visible) {
+                map.removeLayer(detail_lines);
+            }
+            detail_visible = false;
+        }
+    };
+
+    zoom_show_detail();
+    map.addEventListener('zoomend', zoom_show_detail);
 
     if (!!summary_line) {
         map.removeLayer(summary_line);
