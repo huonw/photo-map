@@ -100,6 +100,7 @@ fn main() {
                                          gps_timestamp, camera_timestamp,
                                          near_home
                                   FROM positions
+                                  WHERE filename NOT LIKE '%/PANO%' -- panoramas have incorrect timestamps
                                   GROUP BY true_latitude, true_longitude, gps_timestamp
                                   ORDER BY gps_timestamp
                                 ").unwrap();
