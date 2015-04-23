@@ -168,3 +168,17 @@ ul {
 #source-link {
   text-align: center;
 }
+
+
+path {
+  -webkit-transition: 1s opacity;
+  -moz-transition: 1s opacity;
+  transition: 1s opacity;
+  opacity: 0.7;
+}
+.fade-all path {
+  opacity: 0.3;
+}
+path.dont-fade {
+  opacity: 1;
+}

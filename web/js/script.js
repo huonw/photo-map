@@ -88,6 +88,16 @@ window.addEventListener('load', function() {
 
     L.control.scale({ imperial: false }).addTo(map);
 
+    map.addEventListener('popupclose', function() {
+        ['fade-all', 'dont-fade'].forEach(function(klass) {
+            var elements = document.getElementsByClassName(klass);
+            elements = Array.prototype.slice.call(elements);
+            Array.prototype.forEach.call(elements, function(e) {
+                e.classList.remove(klass);
+            });
+        });
+    });
+
     var mini_tiles = L.tileLayer(tiles, {
         attribution: attrib,
         maxZoom: 12,
@@ -99,7 +109,7 @@ window.addEventListener('load', function() {
         aimingRectOptions: { color: 'white', weight: 2, opacity: 1.0 },
         zoomLevelOffset: -8
     }).addTo(map);
-    var mini_summary = L.polyline(SUMMARY.coords, { color: 'white', opacity: 0.7, weight: 1 })
+    var mini_summary = L.polyline(SUMMARY.coords, { color: 'white', opacity: 0.9, weight: 1 })
                        .addTo(minimap._miniMap);
     set_bounds();
 
@@ -153,14 +163,15 @@ window.addEventListener('load', function() {
         var time_marker = function(bounds, time, text, options) {
             var color = time_to_color(time, 50, 60);
             options.color = color;
-            var marker = L.circleMarker(bounds.getCenter(), options).addTo(map);
+            var location = L.latLng(bounds.getNorth(), bounds.getCenter().lng);
+            var marker = L.circleMarker(location, options).addTo(map);
             var open_popup = function(manual_pan) {
                 var pop_opts = {
                     autoPan: true,
                     closeButton: false
                 };
                 if (manual_pan) {
-                    var zoom = Math.min(map.getBoundsZoom(bounds) - 1, map.getZoom());
+                    var zoom = Math.min(map.getBoundsZoom(bounds), map.getZoom());
                     map.fitBounds(bounds, { maxZoom: zoom, animate: true });
                     pop_opts.autoPan = false;
                 }
@@ -174,7 +185,7 @@ window.addEventListener('load', function() {
             return marker;
         };
 
-        var cluster_marker = function(id, bounds, times, options) {
+        var cluster_indicator = function(id, line, circle, times, options) {
             var start = times[0];
             var end = times[times.length - 1];
             var start_date = new Date(start * 1000).toDateString();
@@ -182,6 +193,7 @@ window.addEventListener('load', function() {
             var text = start_date == end_date ? start_date : start_date + ' - ' + end_date;
 
             options.radius = 0;
+            var bounds = circle.getBounds();
             var marker = time_marker(bounds, (start + end) / 2, text, options);
             id_to_cluster_marker[id] = marker;
 
@@ -192,14 +204,15 @@ window.addEventListener('load', function() {
             clicker.style.marginLeft = normalise(start) * 100 + '%';
             timeline.appendChild(clicker);
 
-            (function(marker) {
-                var f = function() { marker.make_popup(true) };
-                clicker.addEventListener('click', f);
-                var line = id_to_cluster_line[id];
-                if (line) {
-                    line.addEventListener('click', f);
-                }
-            })(marker);
+            var f = function() {
+                marker.make_popup(true)
+                line._container.parentNode.classList.add('fade-all');
+                circle._path.classList.add('dont-fade');
+                line._path.classList.add('dont-fade');
+            };
+            clicker.addEventListener('click', f);
+            line.addEventListener('click', f);
+            circle.addEventListener('click', f);
         }
 
         var detail_lines = L.layerGroup([]);
@@ -209,7 +222,7 @@ window.addEventListener('load', function() {
 
             var lineopts = {
                 color: time_to_color(cluster.mean_time, 50, 60),
-                opacity: 0.8,
+                opacity: 1.0,
                 weight: 2,
                 clickable: true
             };
@@ -218,10 +231,6 @@ window.addEventListener('load', function() {
             id_to_cluster_line[cluster.id] = line;
             id_to_cluster_info[cluster.id] = cluster;
 
-            var dotopts = {
-                radius: 2,
-                opacity: 1.0
-            };
             var start_pos = normalise(cluster.times[0]) * 100;
             var end_pos = normalise(cluster.times[cluster.times.length - 1]) * 100;
         }
@@ -252,21 +261,21 @@ window.addEventListener('load', function() {
             var radius = line_bounds.getNorthEast().distanceTo(line_bounds.getSouthWest()) / 2 * 1.05;
 
             var current = {
-                id: id, coords: line_bounds.getCenter(),//L.latLng(summary.coords[i]),
+                id: id,
+                coords: line_bounds.getCenter(),//L.latLng(summary.coords[i]),
                 times: summary.times[i],
                 radius: radius
             };
 
             var circle_opts = {
                 color: time_to_color(id_to_cluster_info[current.id].mean_time, 100, 60),
-                opacity: 0.8,
+                opacity: 1.0,
                 weight: 5,
                 fill: false,
-                clickable: false
             };
             if (id_to_cluster_info[id].times.length > 1) {
-                L.circle(current.coords, radius, circle_opts).addTo(map);
-                cluster_marker(id, line_bounds, current.times, {});
+                var circle = L.circle(current.coords, radius, circle_opts).addTo(map);
+                cluster_indicator(id, line, circle, current.times, {});
             }
 
             if (prev !== null) {
@@ -279,7 +288,7 @@ window.addEventListener('load', function() {
                 var options = {
                     weight: 3,
                     //dashArray: [1, 5],
-                    opacity: 0.8,
+                    opacity: 1.0,
                     clickable: false
                 };
                 var sat = 100;
