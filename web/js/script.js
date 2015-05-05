@@ -168,7 +168,7 @@ function data_loaded(map, clusters, summary_line) {
 
     var time_popup = function(bounds, colour, text) {
         var location = L.latLng(bounds.getNorth(), bounds.getCenter().lng);
-        var open_popup = function(manual_pan) {
+        var open_popup = function(manual_pan, max_zoom) {
             var pop_opts = {
                 autoPan: !manual_pan,
                 closeButton: false
@@ -177,28 +177,52 @@ function data_loaded(map, clusters, summary_line) {
                 var close_to_screen =
                     innerpad_bounds(map.getPixelBounds(), [-1, 0], [-1, 0])
                     .intersects(latlngbounds_to_bounds(map, bounds));
+
                 var view_bounds, zoom;
                 if (close_to_screen) {
-                    var current_pixel_bounds = map.getPixelBounds();
-                    current_pixel_bounds = innerpad_bounds(current_pixel_bounds,
-                                                           [0.1, 200],
-                                                           [0.2, 200],
-                                                           [0.1, 200]);
-                    var current_zoom = map.getZoom();
-                    var est_zoom = zoomlevel_for_bounds(map, current_pixel_bounds, current_zoom,
-                                                        bounds);
-                    zoom = Math.min(est_zoom, current_zoom);
+                    // if the cluster of interest is almost on screen, we pan so
+                    // that it just lies inside the screen (with some internal
+                    // padding so it's not exactly on the edge) i.e. move as
+                    // little as possible, leaving as many existing things on
+                    // screen as possible.
 
+                    var current_zoom = map.getZoom();
+
+                    var current_pixel_bounds = map.getPixelBounds();
+                    // define the padding
+                    current_pixel_bounds = innerpad_bounds(current_pixel_bounds,
+                                                           [0.1, 100],
+                                                           [0.2, 200]);
+
+                    // compute a zoom level that will ensure that the padded
+                    // screen will be able to contain the cluster's points...
+                    zoom = zoomlevel_for_bounds(map, current_pixel_bounds, current_zoom,
+                                                bounds);
+                    // aligning everything correctly requires we use the
+                    // final zoom here.
+                    zoom = Math.min(zoom, max_zoom);
+
+                    // compute the equivalent pixel size of the screen when we
+                    // change zoom, that is, if we zoom in, draw a rectangle
+                    // along the screen's borders and then zoom back out, this
+                    // variable represents the pixel bounds of that rectangle.
                     var pixel_bounds = bounds_at_zoomlevel(current_pixel_bounds,
                                                            current_zoom, zoom);
+                    // Now work out what absolute position the rectangle delineates.
                     var map_bounds = bounds_to_latlngbounds(map, pixel_bounds, current_zoom);
+                    // and slide (if necessary) the rectangle so that it
+                    // includes `bounds`.
                     view_bounds = translate_to_include_bounds(map, map_bounds,
                                                               bounds, zoom);
                 } else {
-                    zoom = Math.min(map.getBoundsZoom(bounds.pad(0.1)), map.getZoom());
+                    // if the new cluster is too far away we
+                    zoom = map.getBoundsZoom(bounds.pad(0.1));
                     view_bounds = bounds;
                 }
-                map.fitBounds(view_bounds, { maxZoom: zoom, animate: true });
+                // make sure we don't zoom in: the user may've aligned the zoom
+                // perfectly.
+                var true_zoom = Math.min(zoom, max_zoom);
+                map.fitBounds(view_bounds, { maxZoom: true_zoom, animate: true });
             }
             var popup = L.popup(pop_opts)
                         .setLatLng(location)
@@ -256,15 +280,17 @@ function data_loaded(map, clusters, summary_line) {
         var make_popup = time_popup(bounds, colour, marker_text);
 
         // set the click handlers
-        var f = function() {
-            make_popup(true)
-            line._container.parentNode.classList.add('fade-all');
-            circle._path.classList.add('dont-fade');
-            line._path.classList.add('dont-fade');
+        var f = function(max_zoom) {
+            return function() {
+                make_popup(true, Math.max(max_zoom, map.getZoom()));
+                line._container.parentNode.classList.add('fade-all');
+                circle._path.classList.add('dont-fade');
+                line._path.classList.add('dont-fade');
+            };
         };
-        clicker.addEventListener('click', f);
-        line.addEventListener('click', f);
-        circle.addEventListener('click', f);
+        clicker.addEventListener('click', f(15));
+        line.addEventListener('click', f(null));
+        circle.addEventListener('click', f(null));
 
         return { coords: coords, radius: radius };
     }
